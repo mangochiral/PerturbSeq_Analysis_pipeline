@@ -1,4 +1,4 @@
-# 🧬 Preprocessing with SLURM & Interactive Analysis Pipeline
+# Preprocessing with SLURM & Interactive Analysis Pipeline
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 ![Jupyter](https://img.shields.io/badge/jupyter-notebook-orange)
