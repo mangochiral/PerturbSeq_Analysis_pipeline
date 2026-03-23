@@ -2,18 +2,14 @@
 
 ## Overview
 
-This repository provides tools and scripts for preprocessing, analyzing, and visualizing data from CRISPR activation (CRISPRa) experiments.
-
-**Language composition:**  
-- Jupyter Notebook: 89.1%  
-- Python: 10.9%
+This repository provides tools and scripts for preprocessing, analyzing, and visualizing data from CRISPR experiments.
 
 ## Directory Structure
 
 ```
 src/
 ├── basic_processing.py
-│   └── preprocess.py                # Data preprocessing utilities
+│   └── preprocess_adata.py          # Data preprocessing utilities
 ├── guide_assignment_parallel.py     # Assign guides in parallel
 ├── qc_stats.py                     # Quality control statistics (standard)
 ├── qc_stats_heavy_load.py          # QC for large datasets (summary, t-test)
