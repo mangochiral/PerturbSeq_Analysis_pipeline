@@ -6,20 +6,20 @@
 
 ---
 
-Welcome to the **Preprocessing** module of the CRISPRa Analysis Pipeline! This section covers SLURM job submission and running interactive Jupyter-based analysis.
+**Preprocessing** module of the CRISPR Perturb-Seq Analysis! This section covers SLURM job submission, running interactive Jupyter-based analysis, and expected output.
 
 <details>
-<summary>🌟 Table of Contents</summary>
+<summary> Table of Contents</summary>
 
 - [How to Run with SLURM](#how-to-run-with-slurm)
+- [Expected outputs](#expected-outputs)
 - [Interactive Usage](#interactive-usage)
 - [Parameters & Tips](#parameters--tips)
-- [Contact](#contact)
 </details>
 
 ---
 
-## 🚦 How to Run with SLURM
+## How to Run with SLURM
 
 You can use the provided `submit_preprocessing.sh` script to submit preprocessing tasks on a cluster. Example job config:
 
@@ -49,6 +49,14 @@ echo "Completed!"
 ```
 
 ---
+## Expected Outputs
+
+Initial QC was done to remove low quality cells i.e, high mitochondrial percent, and cells have less than 200 genes.
+```
+  Output files: {sample_name_lane}_gex_preprocessed.h5ad
+		        {sample_name_lane}_crispr_preprocessed.h5ad
+```
+---
 
 ## 📔 Interactive Usage
 
@@ -57,10 +65,6 @@ Prefer a notebook experience? You can run preprocessing directly with Jupyter No
 ```bash
 jupyter notebook preprocess.ipynb
 ```
-
-- Walk through each cell interactively.
-- Great for debugging, visualization, and customizing your workflow!
-
 ---
 
 ## ⚙️ Parameters & Tips
@@ -72,19 +76,4 @@ jupyter notebook preprocess.ipynb
 ```bash
 python3 basic_processing.py --help
 ```
-
 ---
-
-## 🦠 Example Output
-
-![Example Plot or Table](https://your-link-here.com/plot.png)
-
----
-
-## 📬 Contact
-
-Questions or suggestions? [Open an issue](https://github.com/mangochiral/CRISPRa_Analysis_pipeline/issues) or email <your.email@example.com>.
-
----
-
-> *Beautiful, reproducible science starts here!*
