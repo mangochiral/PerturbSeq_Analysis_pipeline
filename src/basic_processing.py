@@ -10,38 +10,39 @@ import sys
 import os
 import pandas as pd
 import argparse
-from  preprocess import *
+from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
+import preprocess_adata as ppr
 
-def _run_one(run):
-    """Worker for a single (lane, sample_name) job."""
-    datadir, output_dir, exp, lane, sample_name = run
+def run_preprocessing_job(cellranger_dir: str, 
+                          output_dir: str, 
+                          exp:str, 
+                          lane:str, 
+                          sample_name:str, 
+                          prefix:str| None, 
+                          mt_pct: float, 
+                          filter_cells:bool)->dict:
+    
+    path = os.path.join(cellranger_dir, 'count', 'sample_filtered_feature_bc_matrix.h5')
     try:
-        path_sample_dir = os.path.join(
-            datadir, f'CRISPRia_Cellanome_{lane}', 'per_sample_outs', sample_name
-        )
+        if not os.path.exists(path):
+            return (f"Missing input: {path}")
         
-        xdata = os.path.join(path_sample_dir, 'count', 'sample_filtered_feature_bc_matrix.h5')
-
-        if not os.path.exists(xdata):
-            return (f"Missing input: {xdata}")
-
-        gex_a, crispr_a, pre_filter_counts, post_filter_counts = process_cellranger_h5(
-            xdata, exp, sample_name, lane
+        gex_a, crispr_a, pre_count, post_count = ppr.process_cellranger_h5(
+            path, exp, sample_name, lane, prefix, mt_pct, filter_cells
         )
         # perturb_info  = crispr_a.var.groupby('perturbation_type')['n_cells'].sum()
         outdir = os.path.join(output_dir, f'{sample_name}_{lane}')
         os.makedirs(outdir, exist_ok=True)
-
-        gex_out    = os.path.join(outdir, f"{sample_name}_gex_preprocessed.h5ad")
-        crispr_out = os.path.join(outdir, f"{sample_name}_crispr_preprocessed.h5ad")
-
-        gex_a.write_h5ad(gex_out)
-        crispr_a.write_h5ad(crispr_out)
-
+    
+        gex_a.write_h5ad(os.path.join(outdir, f"{sample_name}_gex_preprocessed.h5ad"))
+        if crispr_a is not None:
+            crispr_a.write_h5ad(os.path.join(outdir, f"{sample_name}_crispr_preprocessed.h5ad"))
+    
+    
         with open(os.path.join(outdir, 'stats_report.txt'), 'w', encoding='utf-8') as file:
-            file.write(f"Pre filter cells count: {pre_filter_counts}\n")
-            file.write(f"Post filter cells count: {post_filter_counts}\n")
+            file.write(f"Pre filter cells count: {pre_count}\n")
+            file.write(f"Post filter cells count: {post_count}\n")
             # file.write(f'Perturbed cells counts info {perturb_info}')
         
         return lane, sample_name
@@ -50,42 +51,47 @@ def _run_one(run):
         return f"Error: {e}"
     
 
+def _unpack_and_run(args_tuple):
+    return run_preprocessing_job(*args_tuple)
+    
 def main():
     parser = argparse.ArgumentParser(description='Processing CRISPR experiment')
-    parser.add_argument('--datadir',type=str,required=True,help='Path to directory that contains CRISPRia_Cellanome_<lane> folders')
+    parser.add_argument('--cellranger_dir',type=str,required=True,help='Path to directory that contains CRISPR h5 data')
+    parser.add_argument('--experiment_info', type=str,required=True,help="experiment metainfo csv file")
+    parser.add_argument('--mt_pct', type=float,default= 20, required=True,help="Threshold for mitochondrial percent")
+    parser.add_argument('--prefix', type=str, default= None, required=True,help="Name of the prefix on the guides")
     parser.add_argument('--exp',type=str,default='crispr',help="Experiment type; for Perturb-seq keep as 'crispr'")
+    parser.add_argument('--filter_cells', action='store_true', default=True,help='Apply cell-level QC filtering (default: True)')
     parser.add_argument('--output_dir',type=str,required=True,help='Path to directory that processed data to be saved')
     parser.add_argument('--nprocs', type=int, help='Number of worker processes')
     args = parser.parse_args()
     
-    # All lane folders like CRISPRia_Cellanome_lane1, lane2, ...
-    folder_path = [d for d in os.listdir(args.datadir)if d.startswith('CRISPRia_Cellanome_')
-                   and os.path.isdir(os.path.join(args.datadir, d))]
-    if not folder_path:
-        raise RuntimeError(f"No CRISPRia_Cellanome_* folders found in {args.datadir}")
+    info_path = os.path.join(args.cellranger_dir, args.experiment_info)
+    experiment_info = pd.read_csv(info_path)
+    experiment_info = experiment_info.loc[:, ~experiment_info.columns.str.startswith("Unnamed")]
     
-    lanes = sorted(d.split('_')[2] for d in folder_path)
-    
-    # Sample names from the first lane’s per_sample_outs
-    per_sample_dir = os.path.join(args.datadir, folder_path[0], 'per_sample_outs')
-    sample_names = [
-        s for s in os.listdir(per_sample_dir)
-        if s != '.DS_Store' and os.path.isdir(os.path.join(per_sample_dir, s))
-    ]
-    if not sample_names:
-        raise RuntimeError(f"No sample folders found in {per_sample_dir}")
+    jobs = []
+    for lane in experiment_info.columns:
+        for sample_name in experiment_info[lane].dropna().unique():
+            sample_dir = os.path.join(
+                args.cellranger_dir,
+                f'CRISPRia_Cellanome_{lane}',
+                'per_sample_outs',
+                sample_name,
+            )
+            jobs.append((sample_dir,args.output_dir, args.exp, lane, sample_name, args.prefix, args.mt_pct,args.filter_cells ))
     
     # Make sure output_dir exists
     os.makedirs(args.output_dir, exist_ok=True)
     num_cores = min(args.nprocs, mp.cpu_count())
     
-    # Running lanes as one job
-    runs = [(args.datadir, args.output_dir, args.exp, lane, sample) for lane in lanes for sample in sample_names]
     ctx =  mp.get_context('fork' if sys.platform != 'win32' else 'spawn')
     with ctx.Pool(processes= num_cores)as pool:
-        for lane, sample in pool.imap(_run_one, runs):
-            print(f'completed {sample},{lane}')
+        for result in pool.imap_unordered(_unpack_and_run, jobs):
+            if "error" in result:
+                print(f"FAILED — {result['error']}")
+                print(f"Completed {result['sample_name']}, {result['lane']}")
+ 
 
 if __name__ == "__main__":
     main()
-
