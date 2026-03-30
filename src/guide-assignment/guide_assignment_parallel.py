@@ -233,7 +233,7 @@ class assign_sgrna:
         assignment_crispat = self.perturbations.loc[idx_max].copy()
 
         # Mark cells with multiple sgRNAs
-        assignment_crispat["guide_id"] = np.where(
+        assignment_crispat["assigned_guide_id"] = np.where(
             assignment_size.reindex(assignment_crispat["cell"].values, fill_value=1).values > 1,
             "multi_sgRNA",
             assignment_crispat["gRNA"],
@@ -322,11 +322,11 @@ def run_guide_jobs(run):
         ]
 
     # --- target_gene parsing with error handling ---
-    is_multi = assignment_crispat["guide_id"].astype(str).eq("multi_sgRNA")
+    is_multi = assignment_crispat["assigned_guide_id"].astype(str).eq("multi_sgRNA")
 
     try:
         assignment_crispat.loc[~is_multi, "target_gene"] = (
-            assignment_crispat.loc[~is_multi, "guide_id"]
+            assignment_crispat.loc[~is_multi, "assigned_guide_id"]
             .astype(str)
             .str.replace("-", "_")
             .str.split("_")
@@ -335,14 +335,14 @@ def run_guide_jobs(run):
     except Exception as e:
         print(f"ERROR: Error parsing target_gene for {value}_{colname}: {e}")
         assignment_crispat.loc[~is_multi, "target_gene"] = (
-            assignment_crispat.loc[~is_multi, "guide_id"].astype(str)
+            assignment_crispat.loc[~is_multi, "assigned_guide_id"].astype(str)
         )
 
     assignment_crispat.loc[is_multi, "target_gene"] = "multi_sgRNA"
 
     # --- join onto obs ---
     gex_adata.obs = gex_adata.obs.join(
-        assignment_crispat[["gRNA", "guide_id", "target_gene", "UMI_counts"]],
+        assignment_crispat[["gRNA", "assigned_guide_id", "target_gene", "UMI_counts"]],
         how="left",
     )
 
