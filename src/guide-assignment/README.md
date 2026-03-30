@@ -21,33 +21,33 @@ This module is part of the [CRISPRa Analysis Pipeline](https://github.com/mangoc
 
      ```bash
 	#!/bin/bash
-#SBATCH --job-name=guide_assignment
-#SBATCH --time=24:00:00
-#SBATCH --mem=100G
-#SBATCH --cpus-per-task=64
-#SBATCH --output=logs/guide_assignment_%j.out
-#SBATCH --error=logs/guide_assignment_%j.err
+	#SBATCH --job-name=guide_assignment
+	#SBATCH --time=24:00:00
+	#SBATCH --mem=100G
+	#SBATCH --cpus-per-task=64
+	#SBATCH --output=logs/guide_assignment_%j.out
+	#SBATCH --error=logs/guide_assignment_%j.err
 
-echo "Starting guide assignment on $(hostname) with ${SLURM_CPUS_PER_TASK} CPUs"
+	echo "Starting guide assignment on $(hostname) with ${SLURM_CPUS_PER_TASK} CPUs"
 
-# Pin BLAS/OpenMP to 1 thread — the Python script manages its own parallelism
-export OMP_NUM_THREADS=1
-export MKL_NUM_THREADS=1
-export OPENBLAS_NUM_THREADS=1
-export NUMEXPR_NUM_THREADS=1
+	# Pin BLAS/OpenMP to 1 thread — the Python script manages its own parallelism
+	export OMP_NUM_THREADS=1
+	export MKL_NUM_THREADS=1
+	export OPENBLAS_NUM_THREADS=1
+	export NUMEXPR_NUM_THREADS=1
 
-# Single job processes all samples in parallel:
-#   main (parent) → NoDaemonPool with 8 children (one per sample)
-#   each child   → inner Pool with 8 grandchildren (64 / 8 = 8 cores each)
-#
-# --nprocs controls outer workers (default = number of samples in metadata)
-python3 guide_assignment_parallel.py \
-    --processed_dir /groups/marson/chandrima/reanalysis_gw_crispr \
-    --cellranger_dir /groups/marson/chandrima/ron_data_gw_crispr/Diff053/cellranger \
-    --expmeta expirements_meta.csv \
-    --nprocs 8
+	# Single job processes all samples in parallel:
+	#   main (parent) → NoDaemonPool with 8 children (one per sample)
+	#   each child   → inner Pool with 8 grandchildren (64 / 8 = 8 cores each)
+	#
+	# --nprocs controls outer workers (default = number of samples in metadata)
+	python3 guide_assignment_parallel.py \
+    	--processed_dir <PATH TO PROCESSED .h5ad DIRECTORY> \
+    	--cellranger_dir <PATH TO CELLRANGER DIR FOR EXPERIMENT METADATA CSV> \
+    	--expmeta expirements_meta.csv \
+    	--nprocs 8
 
-echo "Completed all samples"
+	echo "Completed all samples"
      
      ```
 
