@@ -2,3 +2,14 @@ __pycache__/
 *.pyc
 .DS_Store
 .ipynb_checkpoints/
+
+# ---- large, regenerable or downloaded artifacts (see src/5_sgRNA_annotation/README.md) ----
+# Reference data the notebooks download idempotently (GENCODE / HGNC / UCSC):
+src/5_sgRNA_annotation/genome/
+# Pipeline outputs regenerable by re-running the notebooks (alignment SAM, bulky CSV mirrors):
+*.sam
+src/5_sgRNA_annotation/results/*
+# ...except the small annotation tables that 2_guide-assignment consumes as INPUT:
+!src/5_sgRNA_annotation/results/CRISPRa_targeting_sgRNA_annotated.parquet
+!src/5_sgRNA_annotation/results/CRISPRa_NO-TARGET_sgRNA.parquet
+!src/5_sgRNA_annotation/results/CRISPRa_frameshift_twin_pairs.parquet

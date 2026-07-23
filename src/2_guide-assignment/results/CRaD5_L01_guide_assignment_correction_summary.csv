@@ -1,0 +1,4 @@
+cond,complete,n_batch,n_multiplet,n_twin_doublet,n_reassigned,median_ratio
+Rest,True,16,21052,2458,1186,0.309
+Stim8hr,False,7,29642,1901,1031,0.263
+Stim48hr,True,16,21443,2192,1060,0.308
